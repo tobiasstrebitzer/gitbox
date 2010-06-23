@@ -1,8 +1,7 @@
-[core]
-  
+
 [gitbox]
 	project = "gitbox"
-  tasklist = "26"
+	tasklist = "26"
 	server = "teambox.com"
 	user = "teamboxuser"
 	pass = "********"
