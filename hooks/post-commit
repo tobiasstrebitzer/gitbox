@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require '.git/gitbox/gitbox.rb'
+require '.git/vendor/gitbox/gitbox.rb'
 
 # Define globals
 $PROJECT = `git config --get gitbox.project`.chop
