@@ -1,0 +1,168 @@
+#!/usr/bin/env ruby
+require '.git/gitbox/gitbox.rb'
+
+# Define globals
+$PROJECT = `git config --get gitbox.project`.chop
+$SERVER = `git config --get gitbox.server`.chop
+$USER = `git config --get gitbox.user`.chop
+$PASSWORD = `git config --get gitbox.pass`.chop
+$TASKLIST = `git config --get gitbox.tasklist`.chop
+
+# Get project info
+#project = GitBox::get_project_info()
+#print "Project: #{project["project"]["name"]}\n"
+
+default = ""
+
+if ($TASKLIST == "")
+  # Get tasks list
+  task_list_hash = Hash.new()
+  tasks = GitBox::get_project_task_list()
+
+  # Wait for user input
+  puts "Select task list id:"
+  tasks["task_lists"].each do |tasklist|
+    if task_list_hash.empty?
+      default = "#{tasklist["id"]}"
+      print "* #{tasklist["id"]}: #{tasklist["name"]}\n"
+    else
+      print "  #{tasklist["id"]}: #{tasklist["name"]}\n"
+    end
+    task_list_hash[tasklist["id"]] = [tasklist["id"], tasklist["name"]]
+  end
+  print("  ")
+  STDOUT.flush
+  response = `exec < /dev/tty && read result && echo $result`.chomp
+
+  # Default
+  if (response == "") then 
+    response=default
+  end
+
+  # Validate user input
+  if !task_list_hash[response]
+    puts "#{response} is not in list, aborting"
+    exit 1 
+  end
+  
+  sel_task_list_id = task_list_hash[response][0]
+else
+  sel_task_list_id = $TASKLIST
+end
+
+# Get tasks
+task_hash = Hash.new()
+tasks = GitBox::get_project_tasks(sel_task_list_id)
+
+# Wait for user input
+puts "Select task id for task list #{sel_task_list_id}:"
+tasks["task_list"]["tasks"].each do |task|
+  if task_hash.empty?
+    default = task["id"]
+    print "* #{task["id"]}: #{task["name"]}\n"
+  else
+    print "  #{task["id"]}: #{task["name"]}\n"
+  end
+  task_hash[task["id"]] = [task["id"], task["name"], task["status"]]
+end
+print("  ")
+STDOUT.flush
+response = `exec < /dev/tty && read result && echo $result`.chomp
+
+# Default
+if (response == "") then response = default end
+
+# Validate user input
+if !task_hash[response]
+  puts "#{response} is not a task, aborting"
+  exit 1 
+end
+sel_task = task_hash[response]
+
+# Wait for user input
+puts "Select new status for '#{task_hash[response][1]}' (#{task_hash[response][2]}):"
+status_list = { "1" => "open", "2" => "hold", "3" => "solve", "4" => "reject" }
+status_list.each do |status, name|
+  if (status == sel_task[2])
+    print "* #{status}: #{name}\n"
+  else
+    print "  #{status}: #{name}\n"
+  end
+end
+print("  ")
+STDOUT.flush
+response = `exec < /dev/tty && read -n 1 result && echo $result`.chomp
+
+# Default
+if (response == "") then 
+  response = sel_task[2] 
+else
+  print(" -> ok\n")
+  STDOUT.flush
+end
+
+# Validate user input
+if !status_list[response]
+  puts "#{response} is not a valid status, aborting"
+  exit 1
+else
+  sel_status = response
+end
+
+# Get users
+user_hash = Hash.new()
+project = GitBox::get_project_info()
+
+# Wait for user input
+puts "Who are you?"
+project["project"]["people"]["person"].each do |user|
+  if (user["username"] == $USER)
+    default = user["id"]
+    print "* #{user["id"]}: #{user["username"]}\n"
+  else
+    print "  #{user["id"]}: #{user["username"]}\n"
+  end
+  user_hash[user["id"]] = [user["id"], user["username"]]
+end
+print("  ")
+STDOUT.flush
+response = `exec < /dev/tty && read result && echo $result`.chomp
+
+# Default
+if (response == "") then response = default end
+
+# Validate user input
+if !user_hash[response]
+  puts "#{response} is not a user, aborting"
+  exit 1 
+end
+sel_user = user_hash[response]
+
+# Need Password?
+if (sel_user[1] != $USER)
+  puts "Enter Password:"
+  $USER = sel_user[1]
+  print("  ")
+  STDOUT.flush
+  $PASSWORD = `exec < /dev/tty && stty -echo && read result && stty echo && echo $result`.chomp
+  
+  print("\n")
+  STDOUT.flush
+end
+
+# Get Commit Message
+message = ''
+f = File.open(".git/COMMIT_EDITMSG", "r") 
+f.each_line do |line| 
+  if(line[0].chr != "#")
+    message += line
+  end
+end
+
+# Call Teambox
+result = GitBox::update_status(sel_task_list_id, sel_task[0], sel_status, message)
+if (result.empty?)
+  puts "\nAn error occured, aborting"
+else
+  puts "\nTeambox status successfully set"
+end
