@@ -1,3 +1,24 @@
-Gitbox is THE bridge between gitbox and teambox
+Gitbox is THE bridge between gitbox and teambox.
+It mainly adds a post-commit hook, which handles the process of posting comments and updating status at your teambox account interactively.
 
-more to come...
+Installation:
+
+# In your existing git repository enter the following commands:
+$ cd .git
+$ git remote add origin git://github.com/tobiasstrebitzer/gitbox.git
+$ git fetch
+$ git branch master origin/master
+$ git checkout master
+
+# To add the sample gitbox config to your git config:
+$ cat config.sample >> config
+
+# Finally, edit config and enter your teambox credentials and project
+
+Sample configuration:
+[gitbox]
+	project = "projectname"	# PROJECT'S URL KEY
+	tasklist = "26" 	# OPTIONAL, SPECIFY A TASK LIST ID TO USE
+	server = "teambox.com"	# TEAMBOX SERVER
+	user = "teamboxuser"	# TEAMBOX USER LOGIN NAME
+	pass = "********"	# TEAMBOX USER PASSWORD
